@@ -63,6 +63,62 @@ struct PrefectureList prefectureList[47]
 	{47, "(沖縄県)"},
 };
 
+struct UnitParameter unitParameter[28]{
+	{0x20, "(本文)"},
+	{0x24, "(ヘッダ文)"},
+	{0x26, "(ルビデータ)"},
+	{0x28, "(ジオメトリック)"},
+	{0x29, "(番組共通マクロ)"},
+	{0x30, "(1バイトDRCS)"},
+	{0x31, "(2バイトDRCS)"},
+	{0x34, "(カラーマップ)"},
+	{0x36, "(選択制御)"},
+	{0x38, "(一層フォトグラフィック)"},
+	{0x3B, "(継続)"},
+	{0x3C, "(番組索引)"},
+	{0x3E, "(ダミー)"},
+	{0x3F, "(ネットワーク運用)"},
+	{0x40, "(渋滞・旅行時間)"},
+	{0x41, "(規制・事故)"},
+	{0x42, "(駐車場)"},
+	{0x43, "(区間旅行時間)"},
+	{0x44, "(高度渋滞情報)"},
+	{0x45, "(拡張渋滞・旅行時間)"},
+	{0x46, "(拡張事象規制)"},
+	{0x47, "(施設情報)"},
+	{0x48, "(緊急情報)"},
+	{0x49, "(メッセージ情報)"},
+	{0x50, "(スクランブル情報)"},
+	{0x60, "(番組制御)"},
+	{0x61, "(システム制御)"},
+	{0x62, "(システムデータ)"},
+};
+
+struct SelfSegmentParameter selfSegmentParameter[8]{
+	{0x01, "(放送局識別)"},
+	{0x03, "(番組開始編成時間)"},
+	{0x04, "(交通・緊急情報フラグ)"},
+	{0x05, "(番組情報)"},
+	{0x06, "(親局名)"},
+	{0x08, "(中継放送局名)"},
+	{0x0A, "(代替周波数)"},
+	{0x0C, "(カテゴリ名の再定義)"},
+};
+
+struct OtherSegmentParameter otherSegmentParameter[11]{
+	{0x01, "(放送局識別)"},
+	{0x03, "(番組開始編成時間)"},
+	{0x04, "(交通・緊急情報フラグ)"},
+	{0x05, "(番組情報)"},
+	{0x06, "(基幹放送局名)"},
+	{0x07, "(基幹放送局名)"},
+	{0x08, "(中継放送局名)"},
+	{0x09, "(中継放送局名)"},
+	{0x0A, "(代替周波数)"},
+	{0x0B, "(代替周波数)"},
+	{0x0C, "(カテゴリ名の再定義)"},
+};
+
 unsigned char DecodeData::bitreverse(unsigned char v)
 {
 	v = (v & 0x55555555) << 1 | (v >> 1 & 0x55555555);
@@ -73,10 +129,10 @@ unsigned char DecodeData::bitreverse(unsigned char v)
 	return v;
 }
 
-void DecodeData::setPrefix(unsigned char packetData[22]) {
+void DecodeData::setPrefix(unsigned char *packetData) {
 
 	//付加情報の場合
-	if (packetData[1] == 'B') {
+	if (packetData[1] == 0x0B) {
 
 		//各配列のbitを逆順にする
 		unsigned char p1 = bitreverse(packetData[0]);
@@ -110,6 +166,7 @@ void DecodeData::setPrefix(unsigned char packetData[22]) {
 		pdataBlock = &packetData[4];
 	}
 }
+
 void DecodeData::createDataGroup(std::vector<unsigned char>& dataGroup) {
 
 	keep.getDataGroup(prefixData);
@@ -219,14 +276,14 @@ void  DecodeData::getYMapAddress(unsigned char& YMapNum, unsigned char& YMeshNum
 	return;
 }
 
-//caution unsigned charの連結
-int DecodeData::getMeshID(unsigned char XMapNum, unsigned char YMapNum) {
-	int meshID = ;
+//caution (XMapNum YMapNum)
+unsigned int DecodeData::getMeshID(unsigned char XMapNum, unsigned char YMapNum) {
+	unsigned int meshID = XMapNum * 32 + YMapNum;
 	return meshID;
 }
 
-int DecodeData::getSecondMesh(unsigned char XMapNum, unsigned char YMapNum, unsigned char XMeshNum, unsigned char YMeshNum) {
-	int secondMesh = (YMapNum + 37) * 10000 + (XMapNum + 22) * 100 + YMeshNum * 10 + XMeshNum;
+unsigned int DecodeData::getSecondMesh(unsigned char XMapNum, unsigned char YMapNum, unsigned char XMeshNum, unsigned char YMeshNum) {
+	unsigned int secondMesh = (YMapNum + 37) * 10000 + (XMapNum + 22) * 100 + YMeshNum * 10 + XMeshNum;
 	return secondMesh;
 }
 
@@ -252,44 +309,66 @@ std::string DecodeData::getLinkLayer(std::vector<unsigned char>& dataGroup, unsi
 		return "中域";
 	case 3:
 		return "狭域";
+	};
+}
+
+unsigned char DecodeData::getUnitType(std::vector<unsigned char>& dataGroup, unsigned char& bp) {
+	unsigned char unitTypeNum = dataGroup[bp];
+	return unitTypeNum;
+}
+
+unsigned char DecodeData::getDUL(std::vector<unsigned char>& dataGroup, unsigned char& bp) {
+	//1000 0000をマスク
+	if ((dataGroup[bp] & 0x80) == 1) {
+		return 1;
+	}
+	else {
+		return 0;
 	}
 }
 
-unsigned char  DecodeData::getEndGroupFlag() {
-
+unsigned int  DecodeData::getUnitSize(std::vector<unsigned char>& dataGroup, unsigned char& bp) {
+	//0111 1111をマスク
+	unsigned int unitSize = ((dataGroup[bp] & 0x7F) * 16 * 16 + (dataGroup[bp + 1]));
+	return unitSize;
 }
 
-
-
-unsigned char  DecodeData::getDataUnitSize() {
-
-}
-
-unsigned char  DecodeData::getDataUnitType() {
-
-
+unsigned char  DecodeData::getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, unsigned char& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter) {
+	//1111 0000をマスク
+	unsigned char segmentTypeNum = ((dataGroup[bp] & 0xF0) >> 4);
+	//自局用の場合
+	if (segmentTypeNum != 0x0E) {
+		segmentTypeName = selfSegmentParameter->segmentTypeName[segmentTypeNum];
+		return segmentTypeNum;
+	}
+	//他局用の場合
+	else if (segmentTypeNum == 0x0E) {
+		bp++;
+		segmentTypeNum = ((dataGroup[bp] & 0xF0) >> 4);
+		segmentTypeName = otherSegmentParameter->segmentTypeName[segmentTypeNum];
+		return segmentTypeNum;
+	}
 }
 
 unsigned char  DecodeData::getSegmentSize() {
 
 }
 
-unsigned char  DecodeData::getSegmentType() {
+
+
+unsigned char  DecodeData::getEndGroupFlag() {
 
 }
 
 
-
-
-
 //デコードクラスのmain処理
-void  DecodeData::callDecodeData(struct PrefixData &prefixData, struct PrefectureList &prefectureList)
+void  DecodeData::callDecodeData(union PrefixData &prefixData, struct PrefectureList &prefectureList, struct UnitParameter unitParameter)
 {
 	while (1) {
 
 		unsigned char dataPacket[22];
 
-		setPrefix(dataPacket);
+		setPrefix(&dataPacket[22]);
 
 		//caution SINum等が共用体から取得できているかを確認する
 
@@ -301,7 +380,7 @@ void  DecodeData::callDecodeData(struct PrefixData &prefixData, struct Prefectur
 
 
 			//KeepDataBlockクラスの指定の位置にデータブロックを格納する
-			ret = keep.addDataBlock(SINum, dataGroupNum, dataPacketNum, dataBlock, prefix);
+			unsigned char ret = keep.addDataBlock(prefixData.SINum, prefixData.dataGroupNum,prefixData.dataPacketNum, dataBlock);
 
 			//データブロックが揃うまでループ
 			if (ret == 1) {
@@ -317,8 +396,16 @@ void  DecodeData::callDecodeData(struct PrefixData &prefixData, struct Prefectur
 
 	//参照するバイト位置(BytePlace)を記憶
 	unsigned char bp = 0;
+	//while
 
 	while (1) {
+
+		//セグメントデータの場合
+		if (prefixData.SINum == 0x0D) {
+			//(n)セグメント識別取得
+			segmentTypeNum = getSegmentType(segmentTypeName, dataGroup, bp, selfSegmentParameter, otherSegmentParameter);
+			
+		}
 
 		//BD2 DGL取得
 		bp++;
@@ -425,9 +512,21 @@ void  DecodeData::callDecodeData(struct PrefixData &prefixData, struct Prefectur
 
 		//US(ユニットデータ)の場合
 		else if (dataGroupType == 1) {
+			//(n += 1)データユニットタイプ取得
+			bp += 1;
+			unitTypeNum = getUnitType(dataGroup, bp);
+			unitTypeName = unitParameter.unitTypeName[unitTypeNum];
 
+			//(n += 1)DUL取得
+			bp += 1;
+			DUL = getDUL(dataGroup, bp);
+
+			//ユニットサイズ取得
+			unitSize = getUnitSize(dataGroup, bp);
+
+			//ユニットサイズ分スキップ
+			bp += (2 + unitSize);
 		}
-
 	}
 }
 
