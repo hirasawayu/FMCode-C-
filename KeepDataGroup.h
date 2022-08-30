@@ -7,21 +7,16 @@
 class KeepDataGroup {
 
 private:
-	unsigned char SINum;
 
-	unsigned char dataGroupNum;
-
-	unsigned char dataPacketNum;
-
-	unsigned char lastPacketNum;
+	
 
 public:
 
-	int getPacketFlag(struct prefixData &prefix);
+	int getPacketFlag(union PrefixUnion* prefixUnion);
 
-	int addDataBlock(unsigned char SINum, unsigned char dataGroupNum, unsigned char dataPacketNum, unsigned char dataBlock[20], struct prefixData &prefix);
+	int addDataBlock(union PrefixUnion* prefixUnion, unsigned char* dataBlock);
 
-	void getDataGroup(unsigned char &SINum, unsigned char &dataGroupNum, unsigned char &lastPacketNum);
+	void getDataGroup(union PrefixUnion** prefixUnion);
 
 	void clearDataGroup();
 
@@ -34,4 +29,3 @@ public:
 
 //vector<vector<—v‘f‚ÌŒ^>> •Ï”–¼(—v‘f”1, vector<—v‘f‚ÌŒ^>(—v‘f”2, ‰Šú’l));
 std::vector<std::vector<std::vector<std::vector<unsigned char>>>> keepDataGroup(13, std::vector<std::vector<std::vector<unsigned char>>>(1, std::vector<std::vector<unsigned char>>(1, std::vector<unsigned char>(22))));
-

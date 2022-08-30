@@ -5,40 +5,41 @@
 #include <bitset>
 
 #include "KeepDataGroup.h"
+#include "DecodeData.h"
 
-int KeepDataGroup::getPacketFlag(struct prefixData &prefix) {
+int KeepDataGroup::getPacketFlag(union PrefixUnion* prefixUnion) {
 	
 	//要素内にパケットデータが入っているかのフラグを返す
-	return keepDataGroup.at(prefix.SINum).at(dataGroupNum).at(dataPacketNum).at(20);
+	return keepDataGroup.at(prefixUnion->prefixData.SINum).at(prefixUnion->prefixData.dataGroupNum).at(prefixUnion->prefixData.dataPacketNum).at(20);
 }
 
-int KeepDataGroup::addDataBlock(unsigned char SINum, unsigned char dataGroupNum, unsigned char dataPacketNum, unsigned char dataBlock[20], struct prefixData &prefix) {
+int KeepDataGroup::addDataBlock(union PrefixUnion* prefixUnion, unsigned char* dataBlock) {
 	
 	//SI、データグループ、データパケット番号が無い場合、要素を追加する
 	// keepDataGroup[22] = {18byte(DataBlock用), 2byte(SI=D用), 1byte(DataBlockが入っているかのフラグ), 1byte(最後のDetaBlockがあるかのフラグ)}
 	//注意：各配列(4階層目は除く)の[0]番目要素には何も入れない（0が入る
-	if (dataPacketNum > keepDataGroup.at(SINum).at(dataGroupNum).at(dataPacketNum).size()) {
-		for (char i = keepDataGroup.at(SINum).at(dataGroupNum).at(dataPacketNum).size() + 1; i <= SINum; i++) {
+	if (prefixUnion->prefixData.dataPacketNum > keepDataGroup.at(prefixUnion->prefixData.SINum).at(prefixUnion->prefixData.dataGroupNum).at(prefixUnion->prefixData.dataPacketNum).size()) {
+		for (char i = keepDataGroup.at(prefixUnion->prefixData.SINum).at(prefixUnion->prefixData.dataGroupNum).at(prefixUnion->prefixData.dataPacketNum).size() + 1; i <= prefixUnion->prefixData.SINum; i++) {
 			
-			keepDataGroup.at(SINum).at(dataGroupNum).at(i).push_back( i );
+			keepDataGroup.at(prefixUnion->prefixData.SINum).at(prefixUnion->prefixData.dataGroupNum).at(i).push_back( i );
 				//パケット番号以外の新しく追加した位置にはデータ、フラグ共に0を入れる
-			if (i != dataPacketNum) {
-				keepDataGroup[SINum][dataGroupNum][i][20] = { 0 };
+			if (i != prefixUnion->prefixData.dataPacketNum) {
+				keepDataGroup[prefixUnion->prefixData.SINum][prefixUnion->prefixData.dataGroupNum][i][20] = { 0 };
 			}
 			//パケット番号の位置にはデータブロックを入れ、フラグを1にする
-			else if (i == dataPacketNum) {
+			else if (i == prefixUnion->prefixData.dataPacketNum) {
 				//[0]~[19]はデータブロックを代入
 				for (char j = 0; j < 20; j++) {
 
-					keepDataGroup[SINum][dataGroupNum][i][j] = dataBlock[j];
+					keepDataGroup[prefixUnion->prefixData.SINum][prefixUnion->prefixData.dataGroupNum][i][j] = dataBlock[j];
 				}
 				//[20]にはパケットデータが入っているかを判断するフラグを代入
-				keepDataGroup[SINum][dataGroupNum][i][20] = { 1 };
+				keepDataGroup[prefixUnion->prefixData.SINum][prefixUnion->prefixData.dataGroupNum][i][20] = { 1 };
 
 				//データグループ最後のデータブロックが来たことを示す
-				if (prefix.endSign == 1) {
+				if (prefixUnion->prefixData.endSign == 1) {
 
-					keepDataGroup[SINum][dataGroupNum][i][21] = { 1 };
+					keepDataGroup[prefixUnion->prefixData.SINum][prefixUnion->prefixData.dataGroupNum][i][21] = { 1 };
 				};
 
 
@@ -46,16 +47,16 @@ int KeepDataGroup::addDataBlock(unsigned char SINum, unsigned char dataGroupNum,
 		};
 
 		//最後のデータブロックがある、かつ全てのデータブロックが揃った場合
-		if (keepDataGroup[SINum][dataGroupNum][dataPacketNum][21] == 1) {
+		if (keepDataGroup[prefixUnion->prefixData.SINum][prefixUnion->prefixData.dataGroupNum][prefixUnion->prefixData.dataPacketNum][21] == 1) {
 			char occupationFlagCount = 0;
 
-			for (char i = 1; i <= dataPacketNum; i++) {
-				if (keepDataGroup[SINum][dataGroupNum][i][20] == 1) {
+			for (char i = 1; i <= prefixUnion->prefixData.dataPacketNum; i++) {
+				if (keepDataGroup[prefixUnion->prefixData.SINum][prefixUnion->prefixData.dataGroupNum][i][20] == 1) {
 					occupationFlagCount += 1;
 				};
 			};
 
-			if (occupationFlagCount == dataPacketNum) {
+			if (occupationFlagCount == prefixUnion->prefixData.dataPacketNum) {
 				//全てのデータブロックが揃った場合は1を返す
 				return 1;
 			};
@@ -68,7 +69,7 @@ int KeepDataGroup::addDataBlock(unsigned char SINum, unsigned char dataGroupNum,
 };
 
 //caution DataBlockの渡し方を検討、ポインタを用いるか
-void KeepDataGroup::getDataGroup(unsigned char &SINum, unsigned char &dataGroupNum, unsigned char &lastPacketNum) {
+void KeepDataGroup::getDataGroup(union PrefixUnion** prefixUnion) {
 
 };
 

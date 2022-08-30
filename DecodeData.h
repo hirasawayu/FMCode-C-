@@ -12,7 +12,9 @@ private:
 
 	unsigned char dataPacket[22];
 
-	unsigned char dataBlock[18];
+	unsigned char dataBlock[20];
+
+	unsigned char dataBlockD[20];
 
 	unsigned char prefix[4];
 
@@ -74,18 +76,18 @@ private:
 
 	unsigned char segmentSize;
 
-	std::vector<unsigned char> dataGroup[];
+	std::vector<unsigned char> segmentData;
 
 
 public:
 
-	void callDecodeData(struct PrefixData& prefixData, struct PrefectureList& prefectureList, struct UnitParameter unitParameter);
+	void callDecodeData();
 
-	unsigned char bitreverse(unsigned char packetData);
+	unsigned char bitreverse(unsigned char &Num);
 
-	void setPrefix(unsigned char *packetData);
+	void setPrefix(unsigned char *packetData, unsigned char *dataBlock, union PrefixUnion* prefixUnion);
 
-	void createDataGroup(std::vector<unsigned char>& dataGroup);
+	void createDataGroup(std::vector<unsigned char>& dataGroup, union PrefixUnion* prefixUnion);
 
 	unsigned char getDataGroupLink(std::vector<unsigned char>& dataGroup, unsigned char& bp);
 
@@ -123,30 +125,33 @@ public:
 
 	unsigned char getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, unsigned char& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter);
 
-	unsigned char getSegmentSize();
+	unsigned char getSegmentSize(std::vector<unsigned char>& dataGroup, unsigned char& bp);
 
-	
+	void getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, unsigned char& bp);
 
 	unsigned char getEndGroupFlag();
 };
 
 //プリフィックスの情報を格納する構造体・共用体を作成
-struct prefixData
+struct PrefixData
 {
-	unsigned char SINum : 4;
-	unsigned char decodeSign : 1;
-	unsigned char endSign : 1;
 	unsigned char updateSign : 2;
-	unsigned char dataGroupNum : 16;
+	unsigned char endSign : 1;
+	unsigned char decodeSign : 1;
+	unsigned char SINum : 4;
+
+	unsigned char PreChannelNum : 8;
+	unsigned char PrePageNum : 8;
 	unsigned char dataPacketNum : 8;
 
-}prefixData;
+	//int dataGroupNum = PreChannelNum * 256 + PrePageNum;
+};
 
-union
+union PrefixUnion
 {
 	unsigned char prefix[4];
-	struct prefixData prefixData;
-} prefixUnion;
+	struct PrefixData prefixData;
+};
 
 struct PrefectureList {
 	unsigned char prefectureNum;

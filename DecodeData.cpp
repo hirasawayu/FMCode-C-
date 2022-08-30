@@ -3,12 +3,18 @@
 #include <iostream>
 #include <assert.h>
 #include <bitset>
+#include <cmath>
 
 #include "DecodeData.h"
 #include "KeepDataGroup.h"
 
 //KeepDataGroupのオブジェクトを生成
 KeepDataGroup keep;
+
+PrefixUnion prefixUnion;
+PrefectureList prefectureList;
+UnitParameter unitParameter;
+
 
 
 
@@ -119,61 +125,39 @@ struct OtherSegmentParameter otherSegmentParameter[11]{
 	{0x0C, "(カテゴリ名の再定義)"},
 };
 
-unsigned char DecodeData::bitreverse(unsigned char v)
-{
-	v = (v & 0x55555555) << 1 | (v >> 1 & 0x55555555);
-	v = (v & 0x33333333) << 2 | (v >> 2 & 0x33333333);
-	v = (v & 0x0f0f0f0f) << 4 | (v >> 4 & 0x0f0f0f0f);
-	v = (v & 0x00ff00ff) << 8 | (v >> 8 & 0x00ff00ff);
-	v = (v & 0x0000ffff) << 16 | (v >> 16 & 0x0000ffff);
-	return v;
-}
+//unsigned char DecodeData::bitreverse(unsigned char &Num)
+//{
+//	unsigned char keepNum = Num;
+//	//ビットを反転
+//	for (int i = 0; i < 8; i++) {
+//		if ((keepNum & (std::pow(2, i)) =  
+//	}
+//	return v;
+//}
 
-void DecodeData::setPrefix(unsigned char *packetData) {
-
+void DecodeData::setPrefix(unsigned char *packetData, unsigned char *dataBlock, union PrefixUnion *prefixUnion) {
 	//付加情報の場合
 	if (packetData[1] == 0x0B) {
-
-		//各配列のbitを逆順にする
-		unsigned char p1 = bitreverse(packetData[0]);
-		unsigned char p2 = packetData[1];
-
-		//逆順にした値を入れる配列を用意
-		unsigned char prefix[2];
-
 		//用意した配列に値をコピー
-		memset(prefix, p1, 1);
-		memset(&prefix[1], p2, 1);
-
+		memset(prefixUnion->prefix, packetData[0], 2);
+		//データパケット後ろ20bitを格納
+		memset(dataBlock, packetData[2], 20);
 	}
 
 	else {
-		
-		unsigned char p1 = bitreverse(packetData[0]);
-		unsigned char p2 = packetData[1];
-		unsigned char p3 = packetData[2];
-		unsigned char p4 = packetData[3];
-
-		unsigned char prefix[4];
-
-		memset(prefix, p1, 1);
-		memset(&prefix[1], p2, 1);
-		memset(&prefix[2], p3, 1);
-		memset(&prefix[3], p4, 1);
-
-		//SI、グループ、パケット番号に対応する位置にデータパケット後ろ18bitを格納
-		unsigned char* pdataBlock = dataBlock;
-		pdataBlock = &packetData[4];
+		memset(prefixUnion->prefix, packetData[0], 4);
+		//データパケット後ろ18bitを格納
+		memset(dataBlock, packetData[4], 18);
 	}
 }
 
-void DecodeData::createDataGroup(std::vector<unsigned char>& dataGroup) {
+void DecodeData::createDataGroup(std::vector<unsigned char>& dataGroup, union PrefixUnion* prefixUnion) {
+	
+	keep.getDataGroup(&prefixUnion);
 
-	keep.getDataGroup(prefixData);
+	for (int i = 0; i > prefixUnion->prefixData.dataPacketNum; i++) {
 
-	for (int i = 0; i > packetNum; i++) {
-
-		std::vector<unsigned char> dataGroup =
+		//std::vector<unsigned char> dataGroup =
 
 
 
@@ -350,11 +334,26 @@ unsigned char  DecodeData::getSegmentType(std::string& segmentTypeName, std::vec
 	}
 }
 
-unsigned char  DecodeData::getSegmentSize() {
-
+unsigned char  DecodeData::getSegmentSize(std::vector<unsigned char>& dataGroup, unsigned char& bp) {
+	//0000 1111をマスク
+	unsigned char segmentSize = (dataGroup[bp] & 0x0F);
+	if (segmentSize != 0x0F) {
+		return segmentSize;
+	}
+	else if (segmentSize == 0x0F) {
+		bp++;
+		segmentSize = dataGroup[bp];
+		return segmentSize;
+	}
 }
 
-
+void DecodeData::getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, unsigned char& bp) {
+	for (int i = 0; i > segmentSize; i++) {
+		segmentData[i] = dataGroup[bp];
+		bp++;
+	}
+	return;
+}
 
 unsigned char  DecodeData::getEndGroupFlag() {
 
@@ -362,25 +361,23 @@ unsigned char  DecodeData::getEndGroupFlag() {
 
 
 //デコードクラスのmain処理
-void  DecodeData::callDecodeData(union PrefixData &prefixData, struct PrefectureList &prefectureList, struct UnitParameter unitParameter)
+void  DecodeData::callDecodeData()
 {
 	while (1) {
 
-		unsigned char dataPacket[22];
-
-		setPrefix(&dataPacket[22]);
+		setPrefix(dataPacket, dataBlock, &prefixUnion);
 
 		//caution SINum等が共用体から取得できているかを確認する
 
 
-		packetFlag = keep.getPacketFlag(prefixData);
+		packetFlag = keep.getPacketFlag(&prefixUnion);
 
 		//指定の位置にパケットデータが入っていない場合
 		if (packetFlag = 0 || NULL) {
 
 
 			//KeepDataBlockクラスの指定の位置にデータブロックを格納する
-			unsigned char ret = keep.addDataBlock(prefixData.SINum, prefixData.dataGroupNum,prefixData.dataPacketNum, dataBlock);
+			unsigned char ret = keep.addDataBlock(&prefixUnion, dataBlock);
 
 			//データブロックが揃うまでループ
 			if (ret == 1) {
@@ -392,7 +389,7 @@ void  DecodeData::callDecodeData(union PrefixData &prefixData, struct Prefecture
 
 	std::vector<unsigned char> dataGroup;
 	//caution 作成したデータグループを入れる配列をどうやってもってくるか、データグループ作成
-	createDataGroup(dataGroup);
+	createDataGroup(dataGroup, &prefixUnion);
 
 	//参照するバイト位置(BytePlace)を記憶
 	unsigned char bp = 0;
@@ -401,10 +398,15 @@ void  DecodeData::callDecodeData(union PrefixData &prefixData, struct Prefecture
 	while (1) {
 
 		//セグメントデータの場合
-		if (prefixData.SINum == 0x0D) {
+		if (prefixUnion.prefixData.SINum == 0x0D) {
 			//(n)セグメント識別取得
 			segmentTypeNum = getSegmentType(segmentTypeName, dataGroup, bp, selfSegmentParameter, otherSegmentParameter);
-			
+			//セグメントサイズ取得
+			segmentSize = getSegmentSize(dataGroup, bp);
+
+			//セグメントデータ取得
+			bp++;
+			getSegmentData(segmentData, dataGroup, bp);
 		}
 
 		//BD2 DGL取得
