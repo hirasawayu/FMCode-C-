@@ -135,22 +135,32 @@ public:
 //プリフィックスの情報を格納する構造体・共用体を作成
 struct PrefixData
 {
-	unsigned char updateSign : 2;
-	unsigned char endSign : 1;
-	unsigned char decodeSign : 1;
-	unsigned char SINum : 4;
-
-	unsigned char PreChannelNum : 8;
-	unsigned char PrePageNum : 8;
-	unsigned char dataPacketNum : 8;
+	unsigned int dataPacketNum : 8;
+	unsigned int PrePageNum : 8;
+	unsigned int PreChannelNum : 8;
+	unsigned int SINum : 4;
+	unsigned int decodeSign : 1;
+	unsigned int endSign : 1;
+	unsigned int  updateSign : 2;
 
 	//int dataGroupNum = PreChannelNum * 256 + PrePageNum;
+};
+//付加情報用
+struct PrefixDataD
+{
+	unsigned int dataPacketNum : 4;
+	unsigned int dataGroupNum : 4;
+	unsigned int SINum : 4;
+	unsigned int decodeSign : 1;
+	unsigned int endSign : 1;
+	unsigned int  updateSign : 2;
 };
 
 union PrefixUnion
 {
-	unsigned char prefix[4];
+	unsigned int prefix = 0;
 	struct PrefixData prefixData;
+	struct PrefixDataD prefixDataD;
 };
 
 struct PrefectureList {

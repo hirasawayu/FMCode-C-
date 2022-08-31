@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <bitset>
 
+using std::vector;
+
 class KeepDataGroup {
 
 private:
@@ -28,4 +30,11 @@ public:
 //{*SI{*dataGroup{*PacketNum{ dataBlock, occupationFlag
 
 //vector<vector<—v‘f‚ÌŒ^>> •Ï”–¼(—v‘f”1, vector<—v‘f‚ÌŒ^>(—v‘f”2, ‰Šú’l));
-std::vector<std::vector<std::vector<std::vector<unsigned char>>>> keepDataGroup(13, std::vector<std::vector<std::vector<unsigned char>>>(1, std::vector<std::vector<unsigned char>>(1, std::vector<unsigned char>(22))));
+vector<vector<vector<vector<unsigned char>>>> keepDataGroup(13, vector<vector<vector<unsigned char>>>(0, vector<vector<unsigned char>>(0, vector<unsigned char>(22))));
+
+//dataGroup‚Ì”Ô†‚ğ‹L˜^‚·‚é\‘¢‘Ì
+struct DataGroupCheck
+{
+	unsigned char num;
+	unsigned int checkedGroupNum;
+};

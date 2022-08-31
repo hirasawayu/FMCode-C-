@@ -139,15 +139,26 @@ void DecodeData::setPrefix(unsigned char *packetData, unsigned char *dataBlock, 
 	//付加情報の場合
 	if (packetData[1] == 0x0B) {
 		//用意した配列に値をコピー
-		memset(prefixUnion->prefix, packetData[0], 2);
-		//データパケット後ろ20bitを格納
-		memset(dataBlock, packetData[2], 20);
+
+		for (char i = 0; i < 2; i++) {
+
+			prefixUnion->prefix = (prefixUnion->prefix | packetData[i]);
+			if (i == 1) {
+				break;
+			}
+			prefixUnion->prefix = prefixUnion->prefix << 8;
+		}
 	}
 
 	else {
-		memset(prefixUnion->prefix, packetData[0], 4);
-		//データパケット後ろ18bitを格納
-		memset(dataBlock, packetData[4], 18);
+		for (char i = 0; i < 4; i++) {
+
+			prefixUnion->prefix = (prefixUnion->prefix | packetData[i]);
+			if (i == 3) {
+				break;
+			}
+			prefixUnion->prefix = prefixUnion->prefix << 8;
+		}
 	}
 }
 
