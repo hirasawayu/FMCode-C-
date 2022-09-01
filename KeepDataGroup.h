@@ -10,6 +10,16 @@ class KeepDataGroup {
 
 private:
 
+	//最後のパケットデータがあるかのフラグ
+	unsigned char lastPacketFlag = 0;
+
+	unsigned char SINum = 0;
+	unsigned int dataGroupNum = 0;
+
+	unsigned char pushNum = 0;
+	unsigned char packetNum = 0;
+	unsigned char packetSize = 0;
+
 	
 
 public:
@@ -18,19 +28,11 @@ public:
 
 	int addDataBlock(union PrefixUnion* prefixUnion, unsigned char* dataBlock);
 
-	void getDataGroup(union PrefixUnion** prefixUnion);
+	void getDataGroup(vector<unsigned char>& dataGroup, union PrefixUnion* prefixUnion);
 
 	void clearDataGroup();
 
 };
-
-
-//	四次元配列(vector)
-
-//{*SI{*dataGroup{*PacketNum{ dataBlock, occupationFlag
-
-//vector<vector<要素の型>> 変数名(要素数1, vector<要素の型>(要素数2, 初期値));
-vector<vector<vector<vector<unsigned char>>>> keepDataGroup(13, vector<vector<vector<unsigned char>>>(0, vector<vector<unsigned char>>(0, vector<unsigned char>(22))));
 
 //dataGroupの番号を記録する構造体
 struct DataGroupCheck

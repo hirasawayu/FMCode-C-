@@ -21,113 +21,107 @@ private:
 
 
 	//データグループのバイト数+1
-	unsigned char dataGroupLink;
+	unsigned char dataGroupLink = 0;
 
-	unsigned char packetFlag;
+	unsigned char packetFlag = 0;
 
 	//データグループデータのバイト数
-	int dataGroupdataSize;
+	uint32_t dataGroupdataSize = 0;
 
-	unsigned char dataGroupType;
+	unsigned char dataGroupType = 0;
 
-	unsigned char parameter;
+	unsigned char parameter = 0;
 
-	unsigned char channelNum;
+	unsigned char channelNum = 0;
 
-	unsigned char pageNum;
+	unsigned char pageNum = 0;
 
-	std::string channelName;
+	unsigned char macroSign = 0;
 
-	unsigned char macroSign;
+	std::string channelName = 0;
 
-	unsigned char prefectureNum;
+	unsigned char prefectureNum = 0;
 
-	std::string prefectureName;
+	std::string prefectureName = 0;
 
-	unsigned char XMapNum;
+	unsigned char XMapNum = 0;
 	
-	unsigned char XMeshNum;
+	unsigned char XMeshNum = 0;
 
-	unsigned char YMapNum;
+	unsigned char YMapNum = 0;
 
-	unsigned char YMeshNum;
+	unsigned char YMeshNum = 0;
 
-	unsigned int meshID;
+	unsigned int meshID = 0;
 
-	unsigned int secondMesh;
+	unsigned int secondMesh = 0;
 
-	unsigned char timeFlag;
+	unsigned char timeFlag = 0;
 
 	std::string time;
 
 	std::string linkLayer;
 
-	unsigned char unitTypeNum;
+	unsigned char unitTypeNum = 0;
 
-	std::string unitTypeName;
+	std::string unitTypeName = 0;
 
-	unsigned char DUL;
+	unsigned char DUL = 0;
 
-	unsigned int unitSize;
+	unsigned int unitSize = 0;
 
-	unsigned char segmentTypeNum;
+	unsigned char segmentTypeNum = 0;
 
 	std::string segmentTypeName;
 
-	unsigned char segmentSize;
+	unsigned char segmentSize = 0;
 
 	std::vector<unsigned char> segmentData;
 
 
 public:
 
-	void callDecodeData();
-
-	unsigned char bitreverse(unsigned char &Num);
+	void callDecodeData(unsigned char(&dataPacket)[22]);
 
 	void setPrefix(unsigned char *packetData, unsigned char *dataBlock, union PrefixUnion* prefixUnion);
 
-	void createDataGroup(std::vector<unsigned char>& dataGroup, union PrefixUnion* prefixUnion);
+	unsigned char getDataGroupLink(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getDataGroupLink(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getDataGroupType(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getDataGroupType(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getParameter(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getParameter(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	void getChannelInfo(unsigned char& channelNum, std::string& channelName, std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	void getChannelInfo(unsigned char& channelNum, std::string& channelName, std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getPageNum(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	//unsigned char getUpdateNum(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char  getMacroSign(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getPageNum(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getPrefecture(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char  getMacroSign(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	void  getXMapAddress(unsigned char& XMapNum, unsigned char& XMeshNum, std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getPrefecture(std::vector<unsigned char>& dataGroup, unsigned char& bp);
-
-	void  getXMapAddress(unsigned char& XMapNum, unsigned char& XMeshNum, std::vector<unsigned char>& dataGroup, unsigned char& bp);
-
-	void  getYMapAddress(unsigned char& YMapNum, unsigned char& YMeshNum, std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	void  getYMapAddress(unsigned char& YMapNum, unsigned char& YMeshNum, std::vector<unsigned char>& dataGroup, int32_t& bp);
 
 	unsigned int getMeshID(unsigned char XMapNum, unsigned char YMapNum);
 
 	unsigned int getSecondMesh(unsigned char XMapNum, unsigned char YMapNum, unsigned char XMeshNum, unsigned char YMeshNum);
 
-	unsigned char getTime(std::string& time, std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getTime(std::string& time, std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	std::string getLinkLayer(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	std::string getLinkLayer(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getUnitType(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getUnitType(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getDUL(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getDUL(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned int getUnitSize(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned int getUnitSize(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	unsigned char getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, unsigned char& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter);
+	unsigned char getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, int32_t& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter);
 
-	unsigned char getSegmentSize(std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	unsigned char getSegmentSize(std::vector<unsigned char>& dataGroup, int32_t& bp);
 
-	void getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, unsigned char& bp);
+	void getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, int32_t& bp);
 
 	unsigned char getEndGroupFlag();
 };
@@ -164,22 +158,22 @@ union PrefixUnion
 };
 
 struct PrefectureList {
-	unsigned char prefectureNum;
+	unsigned char prefectureNum = 0;
 	std::string  prefectureName;
 };
 
 struct UnitParameter {
-	unsigned char unitTypeNum;
+	unsigned char unitTypeNum = 0;
 	std::string unitTypeName;
 };
 
 struct SelfSegmentParameter {
-	unsigned char segmentTypeNum;
+	unsigned char segmentTypeNum = 0;
 	std::string segmentTypeName;
 };
 
 struct OtherSegmentParameter {
-	unsigned char segmentTypeNum;
+	unsigned char segmentTypeNum = 0;
 	std::string segmentTypeName;
 };
 
