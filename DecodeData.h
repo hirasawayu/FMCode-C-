@@ -38,11 +38,11 @@ private:
 
 	unsigned char macroSign = 0;
 
-	std::string channelName = 0;
+	std::string channelName;
 
 	unsigned char prefectureNum = 0;
 
-	std::string prefectureName = 0;
+	std::string prefectureName;
 
 	unsigned char XMapNum = 0;
 	
@@ -64,7 +64,7 @@ private:
 
 	unsigned char unitTypeNum = 0;
 
-	std::string unitTypeName = 0;
+	std::string unitTypeName;
 
 	unsigned char DUL = 0;
 
@@ -74,7 +74,7 @@ private:
 
 	std::string segmentTypeName;
 
-	unsigned char segmentSize = 0;
+	unsigned char segmentSize;
 
 	std::vector<unsigned char> segmentData;
 
@@ -83,45 +83,45 @@ public:
 
 	void callDecodeData(unsigned char(&dataPacket)[22]);
 
-	void setPrefix(unsigned char *packetData, unsigned char *dataBlock, union PrefixUnion* prefixUnion);
+	void setPrefix(unsigned char *packetData, union PrefixUnion* prefixUnion);
 
-	unsigned char getDataGroupLink(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getDataGroupLink(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getDataGroupType(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getDataGroupType(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getParameter(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getParameter(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	void getChannelInfo(unsigned char& channelNum, std::string& channelName, std::vector<unsigned char>& dataGroup, int32_t& bp);
+	void getChannelInfo(unsigned char& channelNum, std::string& channelName, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getPageNum(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getPageNum(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char  getMacroSign(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char  getMacroSign(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getPrefecture(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getPrefecture(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	void  getXMapAddress(unsigned char& XMapNum, unsigned char& XMeshNum, std::vector<unsigned char>& dataGroup, int32_t& bp);
+	void  getXMapAddress(unsigned char& XMapNum, unsigned char& XMeshNum, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	void  getYMapAddress(unsigned char& YMapNum, unsigned char& YMeshNum, std::vector<unsigned char>& dataGroup, int32_t& bp);
+	void  getYMapAddress(unsigned char& YMapNum, unsigned char& YMeshNum, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
 	unsigned int getMeshID(unsigned char XMapNum, unsigned char YMapNum);
 
 	unsigned int getSecondMesh(unsigned char XMapNum, unsigned char YMapNum, unsigned char XMeshNum, unsigned char YMeshNum);
 
-	unsigned char getTime(std::string& time, std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getTime(std::string& time, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	std::string getLinkLayer(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	std::string getLinkLayer(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getUnitType(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getUnitType(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getDUL(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getDUL(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned int getUnitSize(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned int getUnitSize(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, int32_t& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter);
+	unsigned char getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, uint32_t& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter);
 
-	unsigned char getSegmentSize(std::vector<unsigned char>& dataGroup, int32_t& bp);
+	unsigned char getSegmentSize(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	void getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, int32_t& bp);
+	void getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
 	unsigned char getEndGroupFlag();
 };
@@ -142,12 +142,13 @@ struct PrefixData
 //ïtâ¡èÓïÒóp
 struct PrefixDataD
 {
-	unsigned int dataPacketNum : 4;
-	unsigned int dataGroupNum : 4;
 	unsigned int SINum : 4;
 	unsigned int decodeSign : 1;
 	unsigned int endSign : 1;
-	unsigned int  updateSign : 2;
+	unsigned int updateSign : 2;
+	unsigned int dataPacketNum : 4;
+	unsigned int dataGroupNum : 4;
+	unsigned int non_used : 16;
 };
 
 union PrefixUnion

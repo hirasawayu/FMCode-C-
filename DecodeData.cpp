@@ -120,9 +120,12 @@ struct OtherSegmentParameter otherSegmentParameter[11]{
 	{0x0C, "(カテゴリ名の再定義)"},
 };
 
-void DecodeData::setPrefix(unsigned char *packetData, unsigned char *dataBlock, union PrefixUnion *prefixUnion) {
+void DecodeData::setPrefix(unsigned char *packetData, union PrefixUnion *prefixUnion) {
+	
+	prefixUnion->prefix = 0;
 	//付加情報の場合
-	if (packetData[1] == 0x0B) {
+	//0000 1111をマスク
+	if ( (packetData[0] & 0x0f) == 0x0D) {
 		//用意した配列に値をコピー
 
 		for (char i = 0; i < 2; i++) {
@@ -147,7 +150,7 @@ void DecodeData::setPrefix(unsigned char *packetData, unsigned char *dataBlock, 
 	}
 }
 
-unsigned char DecodeData::getDataGroupLink(std::vector<unsigned char> &dataGroup, int32_t& bp) {
+unsigned char DecodeData::getDataGroupLink(std::vector<unsigned char> &dataGroup, uint32_t& bp) {
 	//1000 0000を作用したマスク処理
 	if ((dataGroup[bp] & 0x80) == 0x80) {
 		return 1;
@@ -157,7 +160,7 @@ unsigned char DecodeData::getDataGroupLink(std::vector<unsigned char> &dataGroup
 	}
 }
 
-unsigned char  DecodeData::getDataGroupType(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char  DecodeData::getDataGroupType(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	
 	if (dataGroup[bp] == 0x1E) {
 		return 0;
@@ -165,36 +168,41 @@ unsigned char  DecodeData::getDataGroupType(std::vector<unsigned char>& dataGrou
 	else if (dataGroup[bp] == 0x1F) {
 		return 1;
 	}
+	//エラー
+	else {
+		printf("error in getDataGroupType\n");
+		return 0;
+	}
 }
 
-unsigned char  DecodeData::getParameter(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char  DecodeData::getParameter(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0000 1111を作用したマスク処理
 	unsigned char para = (dataGroup[bp] & 0x0F);
 	return para;
 }
 
-void  DecodeData::getChannelInfo(unsigned char &channelNum, std::string &channelName, std::vector<unsigned char>& dataGroup, int32_t& bp) {
+void  DecodeData::getChannelInfo(unsigned char &channelNum, std::string &channelName, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	channelNum = dataGroup[bp];
 	if (channelNum == 0) {
-		std::string channelName = "(総目次/最初の画面)";
+		channelName = "(総目次/最初の画面)";
 	}
 	else if (channelNum >= 1 && channelNum < 20) {
-		std::string channelName = "(ニュース)";
+		channelName = "(ニュース)";
 	}
 	else if (channelNum >= 20 && channelNum < 40) {
-		std::string channelName = "(一般情報番組)";
+		channelName = "(一般情報番組)";
 	}
 	else if (channelNum >= 40 && channelNum < 80) {
-		std::string channelName = "(交通情報)";
+		channelName = "(交通情報)";
 	}
 	else if (channelNum >= 80 && channelNum < 100) {
-		std::string channelName = "(番組情報)";
+		channelName = "(番組情報)";
 	}
 	else if (channelNum >= 100 && channelNum < 150) {
-		std::string channelName = "(気象情報)";
+		channelName = "(気象情報)";
 	}
 	else if (channelNum >= 150 && channelNum < 250) {
-		std::string channelName = "(その他)";
+		channelName = "(その他)";
 	}
 	return;
 }
@@ -202,25 +210,25 @@ void  DecodeData::getChannelInfo(unsigned char &channelNum, std::string &channel
 //内容更新は不要？
 //unsigned char  DecodeData::getUpdateNum(std::vector<unsigned char>& dataGroup, unsigned char& bp) {
 //}
-unsigned char  DecodeData::getPageNum(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char  DecodeData::getPageNum(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0011 1111を作用したマスク処理
 	unsigned char page = (dataGroup[bp] & 0x3F);
 	return page;
 }
 
-unsigned char  DecodeData::getMacroSign(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char  DecodeData::getMacroSign(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//4桁右ビットシフト(1111 0000)
 	unsigned char macro = (dataGroup[bp] >> 4);
 	return macro;
 }
 
-unsigned char  DecodeData::getPrefecture(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char  DecodeData::getPrefecture(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0011 1111を作用したマスク処理
 	unsigned char prefec = (dataGroup[bp] & 0x3F);
 	return prefec;
 }
 
-void  DecodeData::getXMapAddress(unsigned char& XMapNum, unsigned char& XMeshNum, std::vector<unsigned char>& dataGroup, int32_t& bp) {
+void  DecodeData::getXMapAddress(unsigned char& XMapNum, unsigned char& XMeshNum, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//3桁右ビットシフト(1111 1000)
 	XMapNum = (dataGroup[bp] >> 3);
 
@@ -230,7 +238,7 @@ void  DecodeData::getXMapAddress(unsigned char& XMapNum, unsigned char& XMeshNum
 	return;
 }
 
-void  DecodeData::getYMapAddress(unsigned char& YMapNum, unsigned char& YMeshNum, std::vector<unsigned char>& dataGroup, int32_t& bp) {
+void  DecodeData::getYMapAddress(unsigned char& YMapNum, unsigned char& YMeshNum, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//3桁右ビットシフト(1111 1000)
 	YMapNum = (dataGroup[bp] >> 3);
 
@@ -251,7 +259,7 @@ unsigned int DecodeData::getSecondMesh(unsigned char XMapNum, unsigned char YMap
 	return secondMesh;
 }
 
-unsigned char  DecodeData::getTime(std::string &time, std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char  DecodeData::getTime(std::string &time, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0000 1000をマスク
 	unsigned char timeFlag = (dataGroup[bp] & 0x08);
 	if (timeFlag == 1) {
@@ -263,7 +271,7 @@ unsigned char  DecodeData::getTime(std::string &time, std::vector<unsigned char>
 	return timeFlag;
 }
 
-std::string DecodeData::getLinkLayer(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+std::string DecodeData::getLinkLayer(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//1100 0000をマスク
 	unsigned char linkLayerNum = ((dataGroup[bp] & 0xC0) >> 6);
 	switch (linkLayerNum) {
@@ -276,12 +284,12 @@ std::string DecodeData::getLinkLayer(std::vector<unsigned char>& dataGroup, int3
 	};
 }
 
-unsigned char DecodeData::getUnitType(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char DecodeData::getUnitType(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	unsigned char unitTypeNum = dataGroup[bp];
 	return unitTypeNum;
 }
 
-unsigned char DecodeData::getDUL(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char DecodeData::getDUL(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//1000 0000をマスク
 	if ((dataGroup[bp] & 0x80) == 1) {
 		return 1;
@@ -291,13 +299,13 @@ unsigned char DecodeData::getDUL(std::vector<unsigned char>& dataGroup, int32_t&
 	}
 }
 
-unsigned int  DecodeData::getUnitSize(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned int  DecodeData::getUnitSize(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0111 1111をマスク
 	unsigned int unitSize = ((dataGroup[bp] & 0x7F) * 16 * 16 + (dataGroup[bp + 1]));
 	return unitSize;
-}
+};
 
-unsigned char  DecodeData::getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, int32_t& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter) {
+unsigned char  DecodeData::getSegmentType(std::string& segmentTypeName, std::vector<unsigned char>& dataGroup, uint32_t& bp, struct SelfSegmentParameter* selfSegmentParameter, struct OtherSegmentParameter* otherSegmentParameter) {
 	//1111 0000をマスク
 	unsigned char segmentTypeNum = ((dataGroup[bp] & 0xF0) >> 4);
 	//自局用の場合
@@ -306,7 +314,7 @@ unsigned char  DecodeData::getSegmentType(std::string& segmentTypeName, std::vec
 		return segmentTypeNum;
 	}
 	//他局用の場合
-	else if (segmentTypeNum == 0x0E) {
+	else {
 		bp++;
 		segmentTypeNum = ((dataGroup[bp] & 0xF0) >> 4);
 		segmentTypeName = otherSegmentParameter->segmentTypeName[segmentTypeNum];
@@ -314,20 +322,20 @@ unsigned char  DecodeData::getSegmentType(std::string& segmentTypeName, std::vec
 	}
 }
 
-unsigned char  DecodeData::getSegmentSize(std::vector<unsigned char>& dataGroup, int32_t& bp) {
+unsigned char  DecodeData::getSegmentSize(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0000 1111をマスク
 	unsigned char segmentSize = (dataGroup[bp] & 0x0F);
 	if (segmentSize != 0x0F) {
 		return segmentSize;
 	}
-	else if (segmentSize == 0x0F) {
+	else  {
 		bp++;
 		segmentSize = dataGroup[bp];
 		return segmentSize;
 	}
 }
 
-void DecodeData::getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, int32_t& bp) {
+void DecodeData::getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	for (int i = 0; i < segmentSize; i++) {
 		segmentData[i] = dataGroup[bp];
 		bp++;
@@ -341,15 +349,24 @@ void  DecodeData::callDecodeData(unsigned char(& dataPacket)[22])
 	struct PrefectureList prefectureList[47];
 	struct UnitParameter unitParameter[28];
 
-	setPrefix(dataPacket, dataBlock, &prefixUnion);
+	setPrefix(dataPacket, &prefixUnion);
 
-	//caution SINum等が共用体から取得できているかを確認する
-
-
+	
 	packetFlag = keep.getPacketFlag(&prefixUnion);
 
 	//指定の位置にパケットデータが入っていない場合
-	if (packetFlag = 0) {
+	if (packetFlag == 0) {
+		if (((prefixUnion.prefix >> 24) & 0x0f) != 0x0D) {
+			for (int i = 0; i < 18; i++) {
+				dataBlock[i] = dataPacket[i + 4];
+			}
+		}
+		else if (((prefixUnion.prefix >> 24) & 0x0f) == 0x0D) {
+			for (int i = 0; i < 20; i++) {
+				dataBlock[i] = dataPacket[i + 4];
+			}
+		}
+
 		//KeepDataBlockクラスの指定の位置にデータブロックを格納する
 		unsigned char ret = keep.addDataBlock(&prefixUnion, dataBlock);
 
@@ -362,10 +379,10 @@ void  DecodeData::callDecodeData(unsigned char(& dataPacket)[22])
 
 	//階層４のデータグループ
 	std::vector<unsigned char> dataGroup;
-	keep.getDataGroup(dataGroup, &prefixUnion);
+	dataGroup = keep.getDataGroup(&prefixUnion);
 
 	//参照するバイト位置(BytePlace)を記憶
-	int32_t bp = 0;
+	uint32_t bp = 0;
 	//while
 
 	while (1) {
@@ -374,9 +391,12 @@ void  DecodeData::callDecodeData(unsigned char(& dataPacket)[22])
 		if (prefixUnion.prefixData.SINum == 0x0D) {
 			//(n)セグメント識別取得
 			segmentTypeNum = getSegmentType(segmentTypeName, dataGroup, bp, selfSegmentParameter, otherSegmentParameter);
+			//delete
+			printf("segmentTypeNum: %x\n", segmentTypeNum);
 			//セグメントサイズ取得
 			segmentSize = getSegmentSize(dataGroup, bp);
-
+			//delete
+			printf("segmentSize: %x\n", segmentSize);
 			//セグメントデータ取得
 			bp++;
 			getSegmentData(segmentData, dataGroup, bp);
@@ -385,24 +405,30 @@ void  DecodeData::callDecodeData(unsigned char(& dataPacket)[22])
 		//BD2 DGL取得
 		bp++;
 		dataGroupLink = getDataGroupLink(dataGroup, bp);
+		//delete
+		printf("dataGroupLink%x\n", dataGroupLink);
 
 		//DB(n), +2　グループ構成取得
 		bp += 2;
 		dataGroupType = getDataGroupType(dataGroup, bp);
+		//delete
+		printf("dataGroupType: %x\n", dataGroupType);
 
 		//DB(n+1)　パラメータ取得
 		bp++;
 		//RS(データヘッダ)の場合
-		if (dataGroupType = 0) {
+		if (dataGroupType == 0) {
 
 			parameter = getParameter(dataGroup, bp);
+			//delete
+			printf("parameter: %x\n", parameter);
 
 			//DB(n+2)　番組番号取得
 			bp++;
 			if ( (parameter >= 0 && parameter <= 4) || (parameter >= 8 && parameter <= 11) ) {
 				getChannelInfo(channelNum, channelName, dataGroup, bp);
 			}
-			else if (parameter = 6) {
+			else if (parameter == 6) {
 				bp = 0;
 				break;
 			}

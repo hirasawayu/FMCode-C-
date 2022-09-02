@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <fstream>
 
-#include "main.h"
 #include "DecodeData.h"
 
 int main()
@@ -17,7 +16,7 @@ int main()
 	//読み込むバイナリファイルの指定
 	//caution Drag/Dropでファイルを指定する方法を探す
 	//std::ifstream ifs(argv[1], std::ios::in | std::ios::binary);
-	std::ifstream ifs("6_2_SKY_20180225_1003.dpk");
+	std::ifstream ifs("6_2_SKY_20180225_1003.dpk", std::ios::in | std::ios::binary);
 
 	// 開けなかったらエラー
 	if (!ifs)
@@ -30,6 +29,8 @@ int main()
 	while (!ifs.eof()) {
 		ifs.read(reinterpret_cast<char*>(packet), 22);
 
+		
+		
 		//DecodeDataクラスに読み込んだパケットデータを渡す
 		decode.callDecodeData(packet);
 	}

@@ -28,7 +28,7 @@ public:
 
 	int addDataBlock(union PrefixUnion* prefixUnion, unsigned char* dataBlock);
 
-	void getDataGroup(vector<unsigned char>& dataGroup, union PrefixUnion* prefixUnion);
+	vector<unsigned char> getDataGroup(union PrefixUnion* prefixUnion);
 
 	void clearDataGroup();
 
@@ -37,6 +37,6 @@ public:
 //dataGroup‚Ì”Ô†‚ğ‹L˜^‚·‚é\‘¢‘Ì
 struct DataGroupCheck
 {
-	unsigned char num;
-	unsigned int checkedGroupNum;
+	unsigned char num = 0;
+	unsigned int checkedGroupNum = 0;
 };
