@@ -6,13 +6,15 @@
 #include <fstream>
 
 #include "DecodeData.h"
+#include "Documentation.h"
+#include "DataBase.h"
 
 int main()
 //int main(int argc, char* argv[])
 {
 	//KeepDataGroupのオブジェクトを生成
 	DecodeData decode;
-
+	
 	//読み込むバイナリファイルの指定
 	//caution Drag/Dropでファイルを指定する方法を探す
 	//std::ifstream ifs(argv[1], std::ios::in | std::ios::binary);
@@ -22,6 +24,7 @@ int main()
 	if (!ifs)
 	{
 		std::cout << "Error! File can not be opened." << std::endl;
+		ifs.close();
 		return 0;
 	}
 	unsigned char packet[22] = {};
@@ -34,7 +37,6 @@ int main()
 		//DecodeDataクラスに読み込んだパケットデータを渡す
 		decode.callDecodeData(packet);
 	}
-	return 0;
 
-	 
+	return 0;
 }

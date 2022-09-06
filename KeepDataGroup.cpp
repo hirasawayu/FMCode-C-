@@ -6,152 +6,145 @@
 
 #include "KeepDataGroup.h"
 #include "DecodeData.h"
+#include "DataBase.h"
 
 using std::vector;
 
 
-vector<DataGroupCheck> dataGroupCheck(1, {0, 0});
+vector<DataGroupCheck> dataGroupCheck(0, {0, 0});
 
 //{*SI{*dataGroup{*PacketNum{ dataBlock, occupationFlag
 	//vector<vector<要素の型>> 変数名(要素数1, vector<要素の型>(要素数2, 初期値));
-vector<vector<vector<vector<unsigned char>>>> keepDataGroup(14, vector<vector<vector<unsigned char>>>(1, vector<vector<unsigned char>>(1, vector<unsigned char>(22))));
+vector<vector<vector<unsigned char>>>keepDataGroup(0, vector<vector<unsigned char>>(0, vector<unsigned char>(22)));
 
 
 int KeepDataGroup::getPacketFlag(union PrefixUnion* prefixUnion) {
 	//データグループ番号を定義
-	//付加情報以外
-	//delete
-	printf("prefix: %08x\n", prefixUnion->prefix);
-	if (((prefixUnion->prefix >> 24) & 0x0F) != 0x0D) {
-		SINum = prefixUnion->prefixData.SINum;
-		packetNum = prefixUnion->prefixData.dataPacketNum;
-		dataGroupNum = prefixUnion->prefixData.PreChannelNum * 256 + prefixUnion->prefixData.PrePageNum;
-		//delete
-		printf("notD\n");
-	}
-	//付加情報
-	else if (((prefixUnion->prefix >> 8) & 0x0F) == 0x0D) {
-		SINum = prefixUnion->prefixDataD.SINum;
-		packetNum = prefixUnion->prefixDataD.dataPacketNum;
-		dataGroupNum = prefixUnion->prefixDataD.dataGroupNum;
-		//delete
-		printf("D\n");
-	}
-
-	printf("%x\n", packetNum);
-	printf("Page: %x\n", prefixUnion->prefixData.PrePageNum);
-	printf("Channel: %x\n", prefixUnion->prefixData.PreChannelNum);
-	printf("SI: %x\n", SINum);
-	printf("dataGroupNum: %x\n", dataGroupNum);
-	printf("%x\n", prefixUnion->prefixData.decodeSign);
-	printf("%x\n", prefixUnion->prefixData.endSign);
-	printf("%x\n", prefixUnion->prefixData.updateSign);
-	printf("nonused %x\n", prefixUnion->prefixDataD.non_used);
-
-	//要素内にパケットデータが入っているかのフラグを返す
 	//checkedGroupNumの配列にデータグループ番号の要素があるかを判定する
-	unsigned char groupPointer = 0;
+	if (dataGroupCheck.size() == 0) {
+		return 0;
+	}
 	for (char i = 0; i < dataGroupCheck.size(); i++) {
-		if (dataGroupCheck[i].checkedGroupNum == dataGroupNum) {
-			groupPointer = dataGroupCheck[i].num;
+		if (dataGroupCheck[i].actualGroupNum == ActualGroupNum) {
+			OrderGroupNum = dataGroupCheck[i].orderGroupNum;
 		}
-		else if (dataGroupCheck[i].checkedGroupNum != dataGroupNum) {
+		else {
 			return 0;
 		}
 	}
 
-	if (packetNum >= keepDataGroup[SINum][groupPointer].size()) {
+	//パケット番号、セグメントフラグを取得
+	unsigned char PacketNum;
+	if (((prefixUnion->prefix >> 8) & 0x0F) == 0x0D) {
+		PacketNum = prefixUnion->prefixDataD.dataPacketNum;
+		segmentFlag = 1;
+	}
+	else {
+		PacketNum = prefixUnion->prefixData.dataPacketNum;
+		segmentFlag = 0;
+	}
+
+	//要素内にパケットデータが入っているかのフラグを返す
+	if (PacketNum < keepDataGroup.at(OrderGroupNum).size()) {
+		return keepDataGroup[OrderGroupNum][PacketNum][20];
+	}
+	else {
 		return 0;
 	}
-	return keepDataGroup[SINum][dataGroupCheck[groupPointer].num][packetNum][20];
+	
 }
 
 int KeepDataGroup::addDataBlock(union PrefixUnion* prefixUnion, unsigned char* dataBlock) {
 	
+	
 	//データグループ番号を定義
-	//付加情報以外
-	if (((prefixUnion->prefix >> 24) & 0x0f) != 0x0D) {
-		SINum = prefixUnion->prefixData.SINum;
-		packetNum = prefixUnion->prefixData.dataPacketNum;
-		dataGroupNum = SINum * 256 * 256 + prefixUnion->prefixData.PreChannelNum * 256 + prefixUnion->prefixData.PrePageNum;
-	}
 	//付加情報
-	else if (((prefixUnion->prefix >> 24) & 0x0f) == 0x0D) {
-		SINum = prefixUnion->prefixDataD.SINum;
-		packetNum = prefixUnion->prefixDataD.dataPacketNum;
-		dataGroupNum = prefixUnion->prefixDataD.dataGroupNum;
+	if (segmentFlag == 1) {
+		ActualGroupNum = prefixUnion->prefixDataD.SINum * 16 + prefixUnion->prefixDataD.dataGroupNum;
 	}
-	//新規のデータブロックを入れる際のdataGroupCheck.numの値
-	pushNum = dataGroupCheck.size() + 1;
+	else {
+		ActualGroupNum = prefixUnion->prefixData.SINum * 256 * 256 + prefixUnion->prefixData.preChannelNum * 256 + prefixUnion->prefixData.prePageNum;
+	}
+
+	if (ActualGroupNum == 0x0F0101) {
+		return 0;
+	}
 
 	//SI、データグループ、データパケット番号が無い場合、要素を追加する
 	//checkedGroupNumの配列にデータグループ番号の要素があるかを判定する
-	pushNum = NULL;
+	OrderGroupNum = 0xFFFFFFFF;
 	for (char i = 0; i < dataGroupCheck.size(); i++) {
-		if (dataGroupCheck[i].checkedGroupNum == dataGroupNum) {
-			pushNum = dataGroupCheck[i].num;
+		if (ActualGroupNum == dataGroupCheck[i].actualGroupNum) {
+			OrderGroupNum = dataGroupCheck[i].orderGroupNum;
 		}
 	}
 
 	//無い場合は配列の要素に追加し、構造体dataGroupCheckに記録する
-	if (pushNum == NULL) {
+	if (OrderGroupNum == 0xFFFFFFFF) {
 
-		keepDataGroup[SINum].push_back(std::vector<vector<unsigned char>>(0, vector<unsigned char>(22)));
-		pushNum = dataGroupCheck.size();
-		dataGroupCheck.push_back({ pushNum, dataGroupNum });
+		//新規のデータブロックを入れる際のorderGroupNumの値
+		OrderGroupNum = dataGroupCheck.size();
+
+		keepDataGroup.push_back(std::vector<vector<unsigned char>>(0, vector<unsigned char>(22)));
+		dataGroupCheck.push_back({ OrderGroupNum, ActualGroupNum });
 	}
 
-	//mark
-	// keepDataGroup[22] = {18byte(DataBlock用), 2byte(SI=D用), 1byte(DataBlockが入っているかのフラグ), 1byte(最後のDetaBlockがあるかのフラグ)}
-	if (packetNum >= keepDataGroup[SINum][pushNum].size()) {
-		for (unsigned char i = keepDataGroup[SINum][pushNum].size(); i <= packetNum; i++) {
+	//delete
+	printf("orderNum: %02x\n", dataGroupCheck[OrderGroupNum].orderGroupNum);
+	printf("actualNum: %02x\n", dataGroupCheck[OrderGroupNum].actualGroupNum);
+	//パケット番号を取得
+	unsigned char PacketNum;
+	if (segmentFlag == 1) {
+		PacketNum = prefixUnion->prefixDataD.dataPacketNum;
+	}
+	else {
+		PacketNum = prefixUnion->prefixData.dataPacketNum;
+	}
 
-			keepDataGroup[SINum][pushNum].push_back(vector<unsigned char>(22));
+	// keepDataGroup[22] = {18byte(DataBlock用), 2byte(SI=D用), 1byte(DataBlockが入っているかのフラグ), 1byte(最後のDetaBlockがあるかのフラグ)}
+	if (PacketNum >= keepDataGroup[OrderGroupNum].size()) {
+		for (unsigned char i = keepDataGroup[OrderGroupNum].size(); i <= PacketNum; i++) {
+
+			keepDataGroup[OrderGroupNum].push_back(vector<unsigned char>(22));
 			//パケット番号以外の新しく追加した位置にはデータ、フラグ共に0を入れる
-			if (i != packetNum) {
-				keepDataGroup[SINum][pushNum][i][20] = { 0 };
+			if (i != PacketNum) {
+				keepDataGroup[OrderGroupNum][i][20] = { 0 };
 			}
+
 			//パケット番号の位置にはデータブロックを入れ、フラグを1にする
-			else if (i == packetNum) {
+			else if (i == PacketNum) {
 				//[0]~[19]はデータブロックを代入
 				for (char j = 0; j < 20; j++) {
 
-					keepDataGroup[SINum][pushNum][i][j] = dataBlock[j];
+					keepDataGroup[OrderGroupNum][i][j] = dataBlock[j];
 					//delete
-					printf("%02x ", keepDataGroup[SINum][pushNum][i][j]);
+					printf("%02x ", keepDataGroup[OrderGroupNum][i][j]);
 				}
 				//delete
 				printf("\n");
-				printf("i: %d\n", i);
 				//[20]にはパケットデータが入っているかを判断するフラグを代入
-				keepDataGroup[SINum][pushNum][i][20] = { 1 };
+				keepDataGroup[OrderGroupNum][i][20] = 1;
 
 				//データグループ最後のデータブロックが来たことを示す
 				if (prefixUnion->prefixData.endSign == 1) {
 
-					keepDataGroup[SINum][pushNum][i][21] = {1};
-					packetSize = packetNum;
+					keepDataGroup[OrderGroupNum][i][21] = 1;
+					packetSize = PacketNum;
 				};
-
-
 			};
 		};
-		
-		//delete
-		printf("lastPacket: %d\n", lastPacketFlag);
-		printf("lastNum: %d\n", keepDataGroup[SINum][pushNum][packetNum][21] == 1);
 
 		//最後のデータブロックがある、かつ全てのデータブロックが揃った場合
-		if (keepDataGroup[SINum][pushNum][packetNum][21] == 1 || lastPacketFlag == 1) {
+		if (keepDataGroup[OrderGroupNum][PacketNum][21] == 1 || lastPacketFlag == 1) {
 			char occupationFlagCount = 0;
 
-			for (unsigned char i = 1; i <= packetNum; i++) {
-				if (keepDataGroup[SINum][pushNum][i][20] == 1) {
+			for (unsigned char i = 0; i < PacketNum; i++) {
+				if (keepDataGroup[OrderGroupNum][i][20] == 1) {
 					occupationFlagCount += 1;
-				};
-			};
+				}
+			}
 
-			if (occupationFlagCount == packetSize) {
+			if (occupationFlagCount == (packetSize)) {
 				lastPacketFlag = 0;
 				//全てのデータブロックが揃った場合は1を返す
 				return 1;
@@ -160,7 +153,6 @@ int KeepDataGroup::addDataBlock(union PrefixUnion* prefixUnion, unsigned char* d
 				lastPacketFlag = 1;
 			}
 		}
- 	
 	}
 	return 0;
 }
@@ -168,30 +160,33 @@ int KeepDataGroup::addDataBlock(union PrefixUnion* prefixUnion, unsigned char* d
 //caution DataBlockの渡し方を検討、ポインタを用いるか
 std::vector<unsigned char> KeepDataGroup::getDataGroup(union PrefixUnion* prefixUnion) {
 	
-	packetSize = keepDataGroup[SINum][pushNum].size();
-	//delete
-	printf("packetSize: %d\n", packetSize);
-	std::vector <unsigned char>dataGroup;
-	if (SINum != 0x0D) {
-		for (char j = 0; j < packetSize; j++) {
+	packetSize = keepDataGroup[OrderGroupNum].size();
+
+	std::vector <unsigned char>dataGroup(0);
+	if (segmentFlag == 0) {
+		//warn
+		for (int j = 0; j < packetSize; j++) {
 			for (char i = 0; i < 18; i++) {
-				dataGroup.push_back(keepDataGroup[SINum][pushNum][j][i]);
+				dataGroup.push_back(keepDataGroup[OrderGroupNum][j][i]);
 				printf("%02x ", dataGroup[j * 18 + i]);
 			}
 		}
 	}
 	else {
-		for (char j = 0; j < packetSize; j++) {
+		for (int j = 0; j < packetSize; j++) {
 			for (char i = 0; i < 20; i++) {
-				dataGroup.push_back(keepDataGroup[SINum][pushNum][j][i]);
+				dataGroup.push_back(keepDataGroup[OrderGroupNum][j][i]);
+				printf("%02x ", dataGroup[j * 20 + i]);
 			}
 		}
 	}
+	printf("\n");
 	return dataGroup;
 };
 
 void KeepDataGroup::clearDataGroup() {
-
+	keepDataGroup[OrderGroupNum].erase(keepDataGroup[OrderGroupNum].begin(), keepDataGroup[OrderGroupNum].end());
+	keepDataGroup[OrderGroupNum].shrink_to_fit();
 };
 
 

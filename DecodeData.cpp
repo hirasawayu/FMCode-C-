@@ -7,11 +7,28 @@
 
 #include "DecodeData.h"
 #include "KeepDataGroup.h"
+#include "DataBase.h"
 
 //KeepDataGroupのオブジェクトを生成
 KeepDataGroup keep;
-
+DataBase data;
 PrefixUnion prefixUnion;
+
+
+struct ParameterList parameterList[12]{
+	{0, "番組管理A"},
+	{1, "番組管理B"},
+	{2, "ページデータA"},
+	{3, "ページデータB"},
+	{4, "番組共通マクロデータA"},
+	{5, "番組共通マクロデータB"},
+	{6, "継続データ"},
+	{7, "番組索引データ"},
+	{8, "番組管理A"},
+	{9, "番組管理B"},
+	{10, "ページデータA"},
+	{11, "ページデータB"},
+};
 
 struct PrefectureList prefectureList[47]
 {
@@ -120,12 +137,12 @@ struct OtherSegmentParameter otherSegmentParameter[11]{
 	{0x0C, "(カテゴリ名の再定義)"},
 };
 
-void DecodeData::setPrefix(unsigned char *packetData, union PrefixUnion *prefixUnion) {
-	
+void DecodeData::setPrefix(unsigned char* packetData, union PrefixUnion* prefixUnion) {
+
 	prefixUnion->prefix = 0;
 	//付加情報の場合
 	//0000 1111をマスク
-	if ( (packetData[0] & 0x0f) == 0x0D) {
+	if ((packetData[0] & 0x0f) == 0x0D) {
 		//用意した配列に値をコピー
 
 		for (char i = 0; i < 2; i++) {
@@ -150,7 +167,7 @@ void DecodeData::setPrefix(unsigned char *packetData, union PrefixUnion *prefixU
 	}
 }
 
-unsigned char DecodeData::getDataGroupLink(std::vector<unsigned char> &dataGroup, uint32_t& bp) {
+unsigned char DecodeData::getDataGroupLink(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//1000 0000を作用したマスク処理
 	if ((dataGroup[bp] & 0x80) == 0x80) {
 		return 1;
@@ -161,7 +178,7 @@ unsigned char DecodeData::getDataGroupLink(std::vector<unsigned char> &dataGroup
 }
 
 unsigned char  DecodeData::getDataGroupType(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
-	
+
 	if (dataGroup[bp] == 0x1E) {
 		return 0;
 	}
@@ -175,13 +192,18 @@ unsigned char  DecodeData::getDataGroupType(std::vector<unsigned char>& dataGrou
 	}
 }
 
-unsigned char  DecodeData::getParameter(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
+unsigned char DecodeData::getParameter(std::string& parameterName, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0000 1111を作用したマスク処理
 	unsigned char para = (dataGroup[bp] & 0x0F);
+	for (int i = 0; i < 12; i++) {
+		if (para == parameterList[i].parameterNum) {
+			parameterName = parameterList[i].parameterName;
+		}
+	}
 	return para;
 }
 
-void  DecodeData::getChannelInfo(unsigned char &channelNum, std::string &channelName, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
+void  DecodeData::getChannelInfo(unsigned char& channelNum, std::string& channelName, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	channelNum = dataGroup[bp];
 	if (channelNum == 0) {
 		channelName = "(総目次/最初の画面)";
@@ -259,12 +281,15 @@ unsigned int DecodeData::getSecondMesh(unsigned char XMapNum, unsigned char YMap
 	return secondMesh;
 }
 
-unsigned char  DecodeData::getTime(std::string &time, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
+unsigned char  DecodeData::getTime(std::string& time, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0000 1000をマスク
 	unsigned char timeFlag = (dataGroup[bp] & 0x08);
 	if (timeFlag == 1) {
-		unsigned char hour = ((dataGroup[bp] & 0x07) << 3) + ((dataGroup[bp + 1] & 0xC0) >> 6);
-		unsigned char minute = (dataGroup[bp + 1] & 0x3F);
+		unsigned char hour = ((dataGroup[bp] & 0x07) << 3);
+
+		bp++;
+		hour += ((dataGroup[bp] & 0xC0) >> 6);
+		unsigned char minute = (dataGroup[bp] & 0x3F);
 
 		time = hour + ":" + minute;
 	}
@@ -301,7 +326,10 @@ unsigned char DecodeData::getDUL(std::vector<unsigned char>& dataGroup, uint32_t
 
 unsigned int  DecodeData::getUnitSize(std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	//0111 1111をマスク
-	unsigned int unitSize = ((dataGroup[bp] & 0x7F) * 16 * 16 + (dataGroup[bp + 1]));
+	unsigned int unitSize = (dataGroup[bp] & 0x7F) * 16 * 16;
+	bp++;
+	unitSize += dataGroup[bp];
+
 	return unitSize;
 };
 
@@ -328,7 +356,7 @@ unsigned char  DecodeData::getSegmentSize(std::vector<unsigned char>& dataGroup,
 	if (segmentSize != 0x0F) {
 		return segmentSize;
 	}
-	else  {
+	else {
 		bp++;
 		segmentSize = dataGroup[bp];
 		return segmentSize;
@@ -337,22 +365,29 @@ unsigned char  DecodeData::getSegmentSize(std::vector<unsigned char>& dataGroup,
 
 void DecodeData::getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, uint32_t& bp) {
 	for (int i = 0; i < segmentSize; i++) {
-		segmentData[i] = dataGroup[bp];
+		segmentData.push_back (dataGroup[bp]);
 		bp++;
 	}
 	return;
 }
 
-//デコードクラスのmain処理
-void  DecodeData::callDecodeData(unsigned char(& dataPacket)[22])
-{
-	struct PrefectureList prefectureList[47];
-	struct UnitParameter unitParameter[28];
+//SIのtest
+//unsigned char DecodeData::testSI();
 
+//デコードクラスのmain処理
+void  DecodeData::callDecodeData(unsigned char(&dataPacket)[22])
+{
+	
 	setPrefix(dataPacket, &prefixUnion);
 
-	
+
 	packetFlag = keep.getPacketFlag(&prefixUnion);
+
+	//パケット番号をカウント
+	packetCount++;
+	printf("packetCount: %04d\n", packetCount);
+
+	unsigned char ret = 0;
 
 	//指定の位置にパケットデータが入っていない場合
 	if (packetFlag == 0) {
@@ -368,166 +403,226 @@ void  DecodeData::callDecodeData(unsigned char(& dataPacket)[22])
 		}
 
 		//KeepDataBlockクラスの指定の位置にデータブロックを格納する
-		unsigned char ret = keep.addDataBlock(&prefixUnion, dataBlock);
-
-		//データブロックが揃うまでループ
-		if (ret != 1) {
-			return;
-		}
+		ret = keep.addDataBlock(&prefixUnion, dataBlock);
 	}
 
+	//データブロックが揃うまでループ
+	if (ret != 1) {
+		return;
+	}
 
 	//階層４のデータグループ
 	std::vector<unsigned char> dataGroup;
 	dataGroup = keep.getDataGroup(&prefixUnion);
 
+	//使用しないメモリを解放
+	//keep.clearDataGroup();
+
 	//参照するバイト位置(BytePlace)を記憶
 	uint32_t bp = 0;
-	//while
 
+	unsigned char endLoopFlag = 0;
 	while (1) {
+		while (1) {
 
-		//セグメントデータの場合
-		if (prefixUnion.prefixData.SINum == 0x0D) {
-			//(n)セグメント識別取得
-			segmentTypeNum = getSegmentType(segmentTypeName, dataGroup, bp, selfSegmentParameter, otherSegmentParameter);
-			//delete
-			printf("segmentTypeNum: %x\n", segmentTypeNum);
-			//セグメントサイズ取得
-			segmentSize = getSegmentSize(dataGroup, bp);
-			//delete
-			printf("segmentSize: %x\n", segmentSize);
-			//セグメントデータ取得
-			bp++;
-			getSegmentData(segmentData, dataGroup, bp);
-		}
+			//セグメントデータの場合
+			if (((prefixUnion.prefix >> 24) & 0x0f) == 0x0D) {
+				//(n)セグメント識別取得
+				segmentTypeNum = getSegmentType(segmentTypeName, dataGroup, bp, selfSegmentParameter, otherSegmentParameter);
+				data.setData(18, 0, 0, segmentTypeName);
 
-		//BD2 DGL取得
-		bp++;
-		dataGroupLink = getDataGroupLink(dataGroup, bp);
-		//delete
-		printf("dataGroupLink%x\n", dataGroupLink);
+				//セグメントサイズ取得
+				segmentSize = getSegmentSize(dataGroup, bp);
+				//パケット番号取得
+				data.setData(19, 0, packetCount, 0);
+				
+				//セグメントデータ取得
+				bp++;
+				getSegmentData(segmentData, dataGroup, bp);
 
-		//DB(n), +2　グループ構成取得
-		bp += 2;
-		dataGroupType = getDataGroupType(dataGroup, bp);
-		//delete
-		printf("dataGroupType: %x\n", dataGroupType);
-
-		//DB(n+1)　パラメータ取得
-		bp++;
-		//RS(データヘッダ)の場合
-		if (dataGroupType == 0) {
-
-			parameter = getParameter(dataGroup, bp);
-			//delete
-			printf("parameter: %x\n", parameter);
-
-			//DB(n+2)　番組番号取得
-			bp++;
-			if ( (parameter >= 0 && parameter <= 4) || (parameter >= 8 && parameter <= 11) ) {
-				getChannelInfo(channelNum, channelName, dataGroup, bp);
-			}
-			else if (parameter == 6) {
-				bp = 0;
-				break;
+				return;
 			}
 
-			//DB(n+3) 内容更新、ページ総数/ページ番号取得
+			//BD2 DGL取得
 			bp++;
-			if ((parameter >= 0 && parameter <= 4) || (parameter >= 8 && parameter <= 11) ) {
-				pageNum = getPageNum(dataGroup, bp);
-			}
+			dataGroupLink = getDataGroupLink(dataGroup, bp);
 
-			//番組共通マクロ解析
-			//DB(n+4) 番組共通マクロ集合取得
+			//DB(n), +2　グループ構成取得
+			bp += 2;
+			dataGroupType = getDataGroupType(dataGroup, bp);
+
+			//DB(n+1)　パラメータ取得
 			bp++;
-			if (parameter == 4 || parameter == 5) {
-				macroSign = getMacroSign(dataGroup, bp);
-				//マクロ集合符号が1もしくは2バイトの分岐
-				if (macroSign == 2) {
-					bp += 3;
+			//RS(データヘッダ)の場合
+			if (dataGroupType == 0) {
+
+				parameter = getParameter(parameterName, dataGroup, bp);
+				//delete
+				printf("parameter: %x\n", parameter);
+				data.setData(2, 0, 0, 0);
+				data.setData(3, 0, 0, parameterName);
+
+				
+				std::cout << parameterName << std::endl;
+
+				//DB(n+2)　番組番号取得
+				bp++;
+				if ((parameter >= 0 && parameter <= 4) || (parameter >= 8 && parameter <= 11)) {
+					getChannelInfo(channelNum, channelName, dataGroup, bp);
+					data.setData(4, channelNum, 0, 0);
+					data.setData(5, 0, 0, channelName);
 				}
-				if (macroSign == 3) {
-					bp += 2;
-				}
-
-				//構成Aはここで終了
-				if (parameter == 4) {
+				else if (parameter == 6) {
+					bp = 0;
 					break;
 				}
 
-				//(n+6/7) 都道府県取得
+				//DB(n+3) 内容更新、ページ総数/ページ番号取得
+				bp++;
+				if ((parameter >= 0 && parameter <= 4) || (parameter >= 8 && parameter <= 11)) {
+					pageNum = getPageNum(dataGroup, bp);
+					data.setData(6, pageNum, 0, 0);
+				}
+
+
+
+				//番組共通マクロ解析
+				//DB(n+4) 番組共通マクロ集合取得
+				
+				if (parameter == 4 || parameter == 5) {
+					bp++;
+					macroSign = getMacroSign(dataGroup, bp);
+
+					//マクロ集合符号が1もしくは2バイトの分岐
+					if (macroSign == 2) {
+						bp += 3;
+					}
+					if (macroSign == 3) {
+						bp += 2;
+					}
+
+					//構成Aはここで終了
+					if (parameter == 4) {
+						break;
+					}
+
+					//(n+6/7) 都道府県取得
+					prefectureNum = getPrefecture(dataGroup, bp);
+					prefectureName = prefectureList[prefectureNum].prefectureName;
+
+					//番組共通マクロはここで終了
+					bp += 7;
+					break;
+				}
+
+				//番組データヘッダの場合
+				if (parameter == 0 || parameter == 1) {
+					bp += 3;
+				}
+				//ページデータヘッダの場合
+				if (parameter == 2 || parameter == 3) {
+					bp +=4;
+				}
+				//構成Aはここで終了
+				if (parameter == 0 || parameter == 2) {
+					break;
+				}
+
+				//都道府県取得
 				prefectureNum = getPrefecture(dataGroup, bp);
 				prefectureName = prefectureList[prefectureNum].prefectureName;
+				data.setData(7, prefectureNum, 0, 0);
+				data.setData(8, 0, 0, prefectureName);
 
-				//番組共通マクロはここで終了
-				bp += 7;
+				//(n += 2)X座標　地図番号、二次メッシュ取得
+				bp += 2;
+				getXMapAddress(XMapNum, XMeshNum, dataGroup, bp);
+				data.setData(9, XMapNum, 0, 0);
+
+				//(n += 1)Y座標　地図番号、二次メッシュ取得
+				bp++;
+				getYMapAddress(YMapNum, YMeshNum, dataGroup, bp);
+				data.setData(10, YMapNum, 0, 0);
+
+				//MeshID、二次メッシュ取得
+				meshID = getMeshID(XMapNum, YMapNum);
+				data.setData(11, 0, meshID, 0);
+
+				secondMesh = getSecondMesh(XMapNum, YMapNum, XMeshNum, YMeshNum);
+				data.setData(12, 0, secondMesh, 0);
+
+				//(n += 2)番組データヘッダはここで終了
+				bp += 2;
+				
+				if (parameter == 1) {
+					break;
+				}
+				//情報提供時刻取得
+				timeFlag = getTime(time, dataGroup, bp);
+				data.setData(13, 0, 0, time);
+
+				//(n += 1)リンクレイヤ取得
+				bp++;
+				linkLayer = getLinkLayer(dataGroup, bp);
+				data.setData(14, 0, 0, linkLayer);
+
+				//(n += 2)ページデータヘッダ終了
+				bp += 2;
 				break;
 			}
-
-			//番組データヘッダの場合
-			if (parameter == 0 || 1) {
-				bp += 3;
-			}
-			//ページデータヘッダの場合
-			if (parameter == 2 || parameter == 3) {
-				bp = +4;
-			}
-			//構成Aはここで終了
-			if (parameter == 0 || parameter == 2) {
-				break;
-			}
-
-			//都道府県取得
-			prefectureNum = getPrefecture(dataGroup, bp);
-			prefectureName = prefectureList[prefectureNum].prefectureName;
-
-			//(n += 2)X座標　地図番号、二次メッシュ取得
-			bp += 2;
-			getXMapAddress(XMapNum, XMeshNum, dataGroup, bp);
-
-			//(n += 1)Y座標　地図番号、二次メッシュ取得
-			bp++;
-			getYMapAddress(YMapNum, YMeshNum, dataGroup, bp);
-
-			//MeshID、二次メッシュ取得
-			meshID = getMeshID(XMapNum, YMapNum);
-
-			secondMesh = getSecondMesh(XMapNum, YMapNum, XMeshNum, YMeshNum);
-
-			//(n += 2)番組データヘッダはここで終了
-			bp += 2;
-			if (parameter == 0) {
-				break;
-			}
-			//情報提供時刻取得
-			timeFlag = getTime(time, dataGroup, bp);
-
-			//(n += 1)リンクレイヤ取得
-			linkLayer = getLinkLayer(dataGroup, bp);
-
-			//(n += 2)ページデータヘッダ終了
-			bp += 2;
-			break;
 		}
 
-		//US(ユニットデータ)の場合
-		else if (dataGroupType == 1) {
-			//(n += 1)データユニットタイプ取得
-			bp += 1;
-			unitTypeNum = getUnitType(dataGroup, bp);
-			unitTypeName = unitParameter[unitTypeNum].unitTypeName;
+		//長さ調整NULLをスキップ
+		while (dataGroup[bp] == 0x00) {
+			bp++;
+		}
 
-			//(n += 1)DUL取得
-			bp += 1;
-			DUL = getDUL(dataGroup, bp);
+		if (dataGroup[bp] == 0x03 || dataGroup[bp] == 0x04 || dataGroup[bp] == 0x17) {
+			return;
+		}
 
-			//ユニットサイズ取得
-			unitSize = getUnitSize(dataGroup, bp);
+		while (1) {
 
-			//ユニットサイズ分スキップ
-			bp += (2 + unitSize);
+			//US(ユニットデータ)の場合
+			dataGroupType = getDataGroupType(dataGroup, bp);
+			if (dataGroupType == 1) {
+				//(n += 1)データユニットタイプ取得
+				
+				bp += 1;
+				unitTypeNum = getUnitType(dataGroup, bp);
+				for (int i = 0; i < 28; i++) {
+					if (unitTypeNum == unitParameter->unitTypeNum) {
+						unitTypeName = unitParameter[i].unitTypeName;
+					}
+				}
+				data.setData(15, unitTypeNum, 0, 0);
+				data.setData(16, 0, 0, unitTypeName);
+				//delete
+				printf("UnitTypeNum: %x\n", unitTypeNum);
+
+				//(n += 1)DUL取得
+				bp += 1;
+				DUL = getDUL(dataGroup, bp);
+
+				//ユニットサイズ取得
+				unitSize = getUnitSize(dataGroup, bp);
+				data.setData(17, 0, unitSize, 0);
+
+				//ユニットサイズ分スキップ
+				bp += (unitSize + 1);
+				if (dataGroup[bp] != 0x1F) {
+					break;
+				}
+			}
+
+		}
+		//長さ調整NULLをスキップ
+		while (dataGroup[bp] == 0x00) {
+			bp++;
+		}
+
+		if (dataGroup[bp] == 0x03 || dataGroup[bp] == 0x04 || dataGroup[bp] == 0x17) {
+			return;
 		}
 	}
 }

@@ -9,6 +9,7 @@ class DecodeData {
 
 private:
 
+	unsigned int packetCount = 0;
 
 	unsigned char dataPacket[22];
 
@@ -31,6 +32,8 @@ private:
 	unsigned char dataGroupType = 0;
 
 	unsigned char parameter = 0;
+
+	std::string parameterName;
 
 	unsigned char channelNum = 0;
 
@@ -89,7 +92,7 @@ public:
 
 	unsigned char getDataGroupType(std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getParameter(std::vector<unsigned char>& dataGroup, uint32_t& bp);
+	unsigned char getParameter(std::string& parameterName, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
 	void getChannelInfo(unsigned char& channelNum, std::string& channelName, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
@@ -123,15 +126,16 @@ public:
 
 	void getSegmentData(std::vector<unsigned char>& segmentData, std::vector<unsigned char>& dataGroup, uint32_t& bp);
 
-	unsigned char getEndGroupFlag();
+	//test用
+	
 };
 
 //プリフィックスの情報を格納する構造体・共用体を作成
 struct PrefixData
 {
 	unsigned int dataPacketNum : 8;
-	unsigned int PrePageNum : 8;
-	unsigned int PreChannelNum : 8;
+	unsigned int prePageNum : 8;
+	unsigned int preChannelNum : 8;
 	unsigned int SINum : 4;
 	unsigned int decodeSign : 1;
 	unsigned int endSign : 1;
@@ -156,6 +160,11 @@ union PrefixUnion
 	unsigned int prefix = 0;
 	struct PrefixData prefixData;
 	struct PrefixDataD prefixDataD;
+};
+
+struct ParameterList {
+	unsigned char parameterNum = 0;
+	std::string parameterName;
 };
 
 struct PrefectureList {

@@ -10,16 +10,15 @@ class KeepDataGroup {
 
 private:
 
+	uint32_t ActualGroupNum = 0;
+	uint32_t OrderGroupNum = 0;
+
+	//付加情報であるかのフラグ
+	unsigned char segmentFlag = 0;
 	//最後のパケットデータがあるかのフラグ
 	unsigned char lastPacketFlag = 0;
 
-	unsigned char SINum = 0;
-	unsigned int dataGroupNum = 0;
-
-	unsigned char pushNum = 0;
-	unsigned char packetNum = 0;
 	unsigned char packetSize = 0;
-
 	
 
 public:
@@ -37,6 +36,6 @@ public:
 //dataGroupの番号を記録する構造体
 struct DataGroupCheck
 {
-	unsigned char num = 0;
-	unsigned int checkedGroupNum = 0;
+	uint32_t orderGroupNum = 0;
+	uint32_t actualGroupNum = 0;
 };
